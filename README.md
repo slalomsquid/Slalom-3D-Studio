@@ -8,7 +8,11 @@ Controls:
   
 Todo:
     Fix bugs (issues tab)
+    
     Placing / Extruding / Moving vertices (+ lines and faces)
+    
     Loding and saving
+    
     Face colours / texturing
+    
     
