@@ -10,7 +10,7 @@ def point_to_plane(point, offset):
 
     # prevent divide by 0
     if z == 0:
-        z += 0.001
+        z += 0.00001
 
     return (x / z, y / z)
 
@@ -83,3 +83,74 @@ def move_towards(current, target, max_distance_delta):
 def lerp(start, end, t):
     """Linear interpolation between 2 points with t being the proportion between them"""
     return start + t * (end - start)
+
+def get_transformation_matrix(rotation, offset):
+    ax, ay, az = rotation
+    cx, sx = math.cos(ax), math.sin(ax)
+    cy, sy = math.cos(ay), math.sin(ay)
+    cz, sz = math.cos(az), math.sin(az)
+
+    # Create the 4x4 rotation matrices directly as NumPy arrays
+    R_y = np.array([
+        [cy,  0, sy, 0],
+        [0,   1,  0, 0],
+        [-sy, 0, cy, 0],
+        [0,   0,  0, 1]
+    ])
+    
+    R_x = np.array([
+        [1,  0,   0, 0],
+        [0, cx, sx, 0],
+        [0, -sx,  cx, 0],
+        [0,  0,   0, 1]
+    ])
+    
+    R_z = np.array([
+        [cz, -sz, 0, 0],
+        [sz,  cz, 0, 0],
+        [0,   0,  1, 0],
+        [0,   0,  0, 1]
+    ])
+    
+    # Multiply them in order using the @ operator (R_z * R_x * R_y)
+    matrix = R_z @ R_x @ R_y
+    
+    # Inject the translation directly into the last column
+    matrix[0:3, 3] = offset
+    
+    return matrix
+
+def transform_point(point, matrix):
+    x, y, z = point
+    # Multiply matrix rows by the vector [x, y, z, 1]
+    world_x = matrix[0][0]*x + matrix[0][1]*y + matrix[0][2]*z + matrix[0][3]
+    world_y = matrix[1][0]*x + matrix[1][1]*y + matrix[1][2]*z + matrix[1][3]
+    world_z = matrix[2][0]*x + matrix[2][1]*y + matrix[2][2]*z + matrix[2][3]
+    
+    return (world_x, world_y, world_z)
+
+def apply_matrix_to_all(points, matrix):
+    pts = np.array(points)
+    mat = np.array(matrix)
+    
+    ones = np.ones((pts.shape[0], 1))
+    pts_homogenous = np.hstack((pts, ones))
+    
+    transformed = np.dot(pts_homogenous, mat.T)
+    
+    # Convert back to a native Python list of points
+    return transformed[:, :3].tolist()
+
+def transform_points(points, rotation, offset):
+    transformation_matrix = get_transformation_matrix(rotation, offset)
+
+    # Transform every 3D point into camera Space
+    return apply_matrix_to_all(points, transformation_matrix)
+
+def get_screen_points(points):
+    # Project them
+    screen_points = []
+    for wp in points:
+        # dont apply offset because its handled by matrix
+        screen_points.append(plane_to_screen(point_to_plane(wp, (0,0,0))))
+    return screen_points

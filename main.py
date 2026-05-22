@@ -81,6 +81,7 @@ def main():
                     match event.key:
                         case pygame.K_0:
                             offset : list[float] = [0.0,0.0,5.0]
+                            # rotation : list[float]= [math.pi/8,0.0,0.0]
 
         keys = pygame.key.get_pressed()
 
@@ -108,7 +109,7 @@ def main():
             last_pos = pos1
 
         if zooming:
-            offset[2] -= zoom_vel * 2
+            offset[2] -= zoom_vel * 4
         elif panning:
             # up untill 2
             offset[:2] -= np.array(pan_vel) * 2
@@ -136,19 +137,23 @@ def draw(points, lines, faces, offset, rotation):
     transformed_points = []
     screen_points = []
     
-    for point in points:
-            # use this order
-            new_point = utils.rotate_y(point, rotation[1])
-            new_point = utils.rotate_x(new_point, rotation[0])
-            new_point = utils.rotate_z(new_point, rotation[2])
+    # for point in points:
+    #         # use this order
+    #         new_point = utils.rotate_y(point, rotation[1])
+    #         new_point = utils.rotate_x(new_point, rotation[0])
+    #         new_point = utils.rotate_z(new_point, rotation[2])
             
-            world_x = new_point[0] + offset[0]
-            world_y = new_point[1] + offset[1]
-            world_z = new_point[2] + offset[2]
-            transformed_points.append((world_x, world_y, world_z))
+    #         world_x = new_point[0] + offset[0]
+    #         world_y = new_point[1] + offset[1]
+    #         world_z = new_point[2] + offset[2]
+    #         transformed_points.append((world_x, world_y, world_z))
             
-            # Project to 2D screen
-            screen_points.append(utils.plane_to_screen(utils.point_to_plane(new_point, offset)))
+    #         # Project to 2D screen
+    #         screen_points.append(utils.plane_to_screen(utils.point_to_plane(new_point, [offset])))
+
+    transformed_points = utils.transform_points(points, rotation, offset)
+
+    screen_points = utils.get_screen_points(transformed_points)
 
     # (depth, type_string, data_tuple)
     render_queue = []
