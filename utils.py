@@ -1,4 +1,4 @@
-import math, constants, numpy as np
+import math, constants, numpy as np, pygame
 
 """Utility functions to keep main somewhat readable"""
 
@@ -67,7 +67,7 @@ def rotate_z(point, angle_rad):
     return (new_x, new_y, z)
 
 def length(vect):
-    return math.sqrt(vect[0]**2 + vect[1]**2 + vect[2]**2)
+    return np.linalg.norm(vect)
 
 def set_angle(angle: float) -> float:
     return angle % (2 * math.pi)
@@ -154,3 +154,75 @@ def get_screen_points(points):
         # dont apply offset because its handled by matrix
         screen_points.append(plane_to_screen(point_to_plane(wp, (0,0,0))))
     return screen_points
+
+def is_in_triangle(triangle, point):
+    # Source - https://stackoverflow.com/a/2049593
+    # Posted by Kornel Kisielewicz, modified by community. See post 'Timeline' for change history
+    # Retrieved 2026-05-23, License - CC BY-SA 4.0
+
+    pts = np.asarray(point)  # Shape can be (2,) or (N, 2)
+    v1, v2, v3 = np.asarray(triangle[0]), np.asarray(triangle[1]), np.asarray(triangle[2])
+    
+    # Calculate cross products for all three edges
+    d1 = np.cross(pts - v2, v1 - v2)
+    d2 = np.cross(pts - v3, v2 - v3)
+    d3 = np.cross(pts - v1, v3 - v1)
+    
+    # Check for positive and negative signs
+    has_neg = (d1 < 0) | (d2 < 0) | (d3 < 0)
+    has_pos = (d1 > 0) | (d2 > 0) | (d3 > 0)
+    
+    return np.logical_not(has_neg & has_pos)
+
+def scale_points_around_point(points, scale, center):
+    """Scales an array of points by a factor of scale around a center point"""
+    points = np.asarray(points)
+    center = np.asarray(center)
+    
+    # Applies to all points and dimension (broadcast)
+    return center + (points - center) * scale
+
+def get_centre(points):
+    return np.sum(points) / len(points)
+
+def render_text(text : str, pos, color, canv, size=100, center=False, transparent=False):
+    font_obj = pygame.font.SysFont(None, size) 
+    if transparent:
+        text_surface = pygame.Surface((500, 50), pygame.SRCALPHA)
+        text_surface = text_surface.convert_alpha()
+    else:
+        text_surface = font_obj.render(text, False, color)
+    text_rect = text_surface.get_rect()
+    text_rect.x, text_rect.y = (pos[0], pos[1])
+    if center:
+        text_rect.center = (pos[0], pos[1])
+    canv.blit(text_surface, text_rect)
+
+def get_axis_lines(d, thickness=2):
+    """Returns world axes (X, Y, Z) with customizable color and thickness."""
+    return [
+        ((-d,  0,  0), ( d,  0,  0), constants.RED,   thickness),
+        (( 0, -d,  0), ( 0,  d,  0), constants.GREEN, thickness),
+        (( 0,  0, -d), ( 0,  0,  d), constants.BLUE,  thickness)
+    ]
+
+def get_grid_lines(d, dmod=2, color=constants.LIGHT_GREY, thickness=1):
+    """Returns the floor plane grid lines."""
+    lines = []
+    for num in range(-int(d) - dmod, int(d) + dmod + 1):
+        lines.append(((num, 0, -d-dmod), (num, 0, d+dmod), color, thickness))
+        lines.append(((-d-dmod, 0, num), (d+dmod, 0, num), color, thickness))
+    return lines
+
+def get_lock_lines(points, selected, x_lock, y_lock, z_lock, d, thickness=2):
+    """Returns movement lock lines attached to the active selection."""
+    lines = []
+    for point_index in selected[0]:
+        pt = points[point_index] # Use raw object-space point to prevent double-rotation
+        if x_lock:
+            lines.append(((pt[0]-d, pt[1], pt[2]), (pt[0]+d, pt[1], pt[2]), constants.RED, thickness))
+        if y_lock:
+            lines.append(((pt[0], pt[1]-d, pt[2]), (pt[0], pt[1]+d, pt[2]), constants.GREEN, thickness))
+        if z_lock:
+            lines.append(((pt[0], pt[1], pt[2]-d), (pt[0], pt[1], pt[2]+d), constants.BLUE, thickness))
+    return lines
