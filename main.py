@@ -58,9 +58,11 @@ def main():
     scaling = False
     scale_centre = (0.0,0.0)
     initial_poses = []
-    x_lock = False
-    y_lock = False
-    z_lock = False
+    axis_lock = [False, False, False]
+    show_grid = True
+    show_axes = True
+    cull_backfaces = False
+    wireframe = False
 
     selection = 0
     """0: points, 1: lines, 2: faces just like blender :)"""
@@ -92,9 +94,9 @@ def main():
                 case pygame.MOUSEMOTION:
                     if moving:
                         for selected_idx in selected[0]:
-                            if not y_lock:
+                            if not axis_lock[1]:
                                 points[selected_idx][0] += event.rel[0] * 0.01
-                            if not x_lock:
+                            if not axis_lock[0]:
                                 points[selected_idx][1] -= event.rel[1] * 0.01
                     if scaling:
                         for selected_idx in selected[0]:  
@@ -128,7 +130,7 @@ def main():
                             # rotation : list[float]= [math.pi/8,0.0,0.0]
                         case pygame.K_1:
                             if moving:
-                                x_lock = not x_lock
+                                axis_lock[0] = not axis_lock[0]
                                 for point_index in selected[0]:
                                     # reset postition
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
@@ -141,7 +143,7 @@ def main():
                             selected[2] = []
                         case pygame.K_2:
                             if moving:
-                                x_lock = not x_lock
+                                axis_lock[1] = not axis_lock[1]
                                 for point_index in selected[0]:
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
                             selected_points_set = set(selected[0])
@@ -162,7 +164,7 @@ def main():
                             selected[2] = []
                         case pygame.K_3:
                             if moving:
-                                x_lock = not x_lock
+                                axis_lock[0] = not axis_lock[0]
                                 for point_index in selected[0]:
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
                             selection = 2
@@ -184,6 +186,14 @@ def main():
                                         selected[1].append(possible_line_idx)
                             selected[0] = []
                             selected[1] = []
+                        case pygame.K_4:
+                            show_grid = not show_grid
+                        case pygame.K_5:
+                            show_axes = not show_axes
+                        case pygame.K_6:
+                            cull_backfaces = not cull_backfaces
+                        case pygame.K_TAB:
+                            wireframe = not wireframe
                         case pygame.K_z:
                             if (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or keys[pygame.K_LMETA] or keys[pygame.K_RMETA]):
                                 prev_state = history.undo(points, lines, faces)
@@ -221,7 +231,7 @@ def main():
                                     faces.append(new_face)
                         case pygame.K_x:
                             if moving:
-                                x_lock = not x_lock
+                                axis_lock[0] = not axis_lock[0]
                                 for point_index in selected[0]:
                                     points[point_index] = [points[point_index][0], initial_poses[selected[0].index(point_index)][1], initial_poses[selected[0].index(point_index)][2]]
                             else:
@@ -384,9 +394,9 @@ def main():
                                                     selected[0].append(screen_points.index(point))
                                             else:
                                                 selected[0] = [screen_points.index(point)]
-                                                x_lock = False
-                                                y_lock = False
-                                                z_lock = False
+                                                axis_lock[0] = False
+                                                axis_lock[1] = False
+                                                axis_lock[2] = False
                                             break
                                 case 1:
                                     for line in lines:
@@ -408,9 +418,9 @@ def main():
                                                         selected[1].append(lines.index(line))
                                                 else:
                                                     selected[1] = [lines.index(line)]
-                                                    x_lock = False
-                                                    y_lock = False
-                                                    z_lock = False
+                                                    axis_lock[0] = False
+                                                    axis_lock[1] = False
+                                                    axis_lock[2] = False
                                                 break
                                 case 2:
                                     for face in faces:
@@ -422,9 +432,9 @@ def main():
                                                     selected[2].append(faces.index(face))
                                             else:
                                                 selected[2] = [faces.index(face)]
-                                                x_lock = False
-                                                y_lock = False
-                                                z_lock = False
+                                                axis_lock[0] = False
+                                                axis_lock[1] = False
+                                                axis_lock[2] = False
                                             break
 
         zooming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or keys[pygame.K_LMETA] or keys[pygame.K_RMETA])
@@ -471,7 +481,7 @@ def main():
         vel[0] = utils.lerp(vel[0], 0.0, 2.0 * delta_time)
         vel[1] = utils.lerp(vel[1], 0.0, 2.0 * delta_time)
 
-        draw(points, lines, faces, offset, rotation, selected, moving, x_lock, y_lock, z_lock, selection)
+        draw(points, lines, faces, offset, rotation, selected, moving, axis_lock, selection, show_grid, show_axes, cull_backfaces, wireframe)
 
     pygame.quit()
 
@@ -650,7 +660,7 @@ def main():
 
 #     pygame.display.update()
 
-def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=False, y_lock=False, z_lock=False, selection=0):
+def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lock = [False, False, False], selection=0, show_grid = True, show_axes = True, cull_backfaces = False, wireframe = False):
     SCREEN.fill((0, 0, 0))
 
     # Transform points to 3D camera space
@@ -691,10 +701,10 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
 
     # draw mesh
     for depth, item_type, data in render_queue:
-        if item_type == 'vertex':
+        if item_type == 'vertex' and wireframe:
             pygame.draw.circle(SCREEN, (200, 200, 200), screen_points[data], 3)
-            
-        elif item_type == 'line':
+
+        elif item_type == 'line' and wireframe:
             pygame.draw.line(SCREEN, (255, 255, 255), screen_points[data[0]], screen_points[data[1]], 1)
             
         elif item_type == 'face':
@@ -707,8 +717,9 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
             color = (50, 120, 255) if winding > 0 else (255, 70, 70)
 
             # Hide backfaces
-            # if winding <= 0:
-            #   continue 
+            if cull_backfaces or not wireframe:
+                if winding <= 0:
+                  continue 
 
             # color = (50, 120, 255) # Blue = Front
 
@@ -719,11 +730,13 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
     d = utils.length(offset) / 2 
     guide_lines = []
     
-    guide_lines.extend(utils.get_axis_lines(d, thickness=4))
-    guide_lines.extend(utils.get_grid_lines(d, dmod=2, color=constants.DARK_GREY, thickness=1))
+    if show_grid:
+        guide_lines.extend(utils.get_grid_lines(d, dmod=2, color=constants.DARK_GREY, thickness=1))
+    if show_axes:
+        guide_lines.extend(utils.get_axis_lines(d, thickness=4))
     
     if moving:
-        guide_lines.extend(utils.get_lock_lines(points, selected, x_lock, y_lock, z_lock, d, thickness=4))
+        guide_lines.extend(utils.get_lock_lines(points, selected, axis_lock, d, thickness=4))
 
     for p0_local, p1_local, color, thickness in guide_lines:
         rotated_line = []
@@ -772,6 +785,7 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
     pygame.draw.rect(SCREEN, constants.WHITE, (70, 10, inc_size, inc_size))
     pygame.draw.rect(SCREEN, constants.BLACK, (72, 12, 16, 16))
     pygame.draw.rect(SCREEN, constants.SKY_BLUE, (30*(selection+1)-27, 3, 34, 34), 4)
+    # show grid
     icn_start = (130, 10)
     pygame.draw.rect(SCREEN, constants.WHITE, (icn_start[0], icn_start[1], inc_size, inc_size))
     # vert lines
@@ -780,10 +794,36 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
     # horiz lines
     pygame.draw.line(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+6), (icn_start[0]+inc_size-2, icn_start[1]+6), 2)
     pygame.draw.line(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+inc_size-6), (icn_start[0]+inc_size-2, icn_start[1]+inc_size-6), 2)
+    if show_grid:
+        pygame.draw.rect(SCREEN, constants.SKY_BLUE, (icn_start[0]-7, 3, 34, 34), 4)
+
+    # show axes
     icn_start = (160, 10)
     pygame.draw.rect(SCREEN, constants.WHITE, (icn_start[0], icn_start[1], inc_size, inc_size))
     pygame.draw.line(SCREEN, constants.BLACK, (icn_start[0]+inc_size//2, icn_start[1]+2), (icn_start[0]+inc_size//2, icn_start[1]+inc_size-2), 2)
     pygame.draw.line(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+inc_size//2), (icn_start[0]+inc_size-2, icn_start[1]+inc_size//2), 2)
+    if show_axes:
+        pygame.draw.rect(SCREEN, constants.SKY_BLUE, (icn_start[0]-7, 3, 34, 34), 4)
+
+    # cull backfaces
+    icn_start = (190, 10)
+    pygame.draw.rect(SCREEN, constants.WHITE, (icn_start[0], icn_start[1], inc_size, inc_size))
+    pygame.draw.rect(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+2, inc_size-8, inc_size-8))
+    pygame.draw.rect(SCREEN, constants.GREY, (icn_start[0]+6, icn_start[1]+6, inc_size-8, inc_size-8))
+    if cull_backfaces:
+        pygame.draw.rect(SCREEN, constants.SKY_BLUE, (icn_start[0]-7, 3, 34, 34), 4)
+
+    icn_start = (250, 10)
+    pygame.draw.rect(SCREEN, constants.WHITE, (icn_start[0], icn_start[1], inc_size, inc_size))
+    pygame.draw.rect(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+2, inc_size-4, inc_size-4), width=2)
+    if not wireframe:
+        pygame.draw.rect(SCREEN, constants.SKY_BLUE, (icn_start[0]-7, 3, 34, 34), 4)
+
+    icn_start = (280, 10)
+    pygame.draw.rect(SCREEN, constants.WHITE, (icn_start[0], icn_start[1], inc_size, inc_size))
+    pygame.draw.rect(SCREEN, constants.BLACK, (icn_start[0]+2, icn_start[1]+2, inc_size-4, inc_size-4))
+    if wireframe:
+        pygame.draw.rect(SCREEN, constants.SKY_BLUE, (icn_start[0]-7, 3, 34, 34), 4)
 
     pygame.display.update()
 

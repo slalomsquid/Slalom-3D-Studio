@@ -214,15 +214,15 @@ def get_grid_lines(d, dmod=2, color=constants.LIGHT_GREY, thickness=1):
         lines.append(((-d-dmod, 0, num), (d+dmod, 0, num), color, thickness))
     return lines
 
-def get_lock_lines(points, selected, x_lock, y_lock, z_lock, d, thickness=2):
+def get_lock_lines(points, selected, locks, d, thickness=2):
     """Returns movement lock lines attached to the active selection."""
     lines = []
     for point_index in selected[0]:
         pt = points[point_index] # Use raw object-space point to prevent double-rotation
-        if x_lock:
+        if locks[0]:
             lines.append(((pt[0]-d, pt[1], pt[2]), (pt[0]+d, pt[1], pt[2]), constants.RED, thickness))
-        if y_lock:
+        if locks[1]:
             lines.append(((pt[0], pt[1]-d, pt[2]), (pt[0], pt[1]+d, pt[2]), constants.GREEN, thickness))
-        if z_lock:
+        if locks[2]:
             lines.append(((pt[0], pt[1], pt[2]-d), (pt[0], pt[1], pt[2]+d), constants.BLUE, thickness))
     return lines
