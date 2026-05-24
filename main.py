@@ -135,31 +135,18 @@ def main():
                                     # reset postition
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
                             selection = 0
-                            for line_idx in selected[1]:
-                                selected[0] += lines[line_idx]
-                            for face_idx in selected[1]:
-                                selected[0] += lines[face_idx]
+                            selected[0] += utils.line_idxs_to_points(selected[1], lines)
+                            selected[0] += utils.face_idxs_to_point_idxs(selected[2], faces)
                             selected[1] = []
                             selected[2] = []
                         case pygame.K_2:
+                            selection = 1
                             if moving:
                                 axis_lock[1] = not axis_lock[1]
                                 for point_index in selected[0]:
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
-                            selected_points_set = set(selected[0])
-                            selection = 1
-                            for possible_line_idx, line in enumerate(lines):
-                                # skip if selected
-                                if possible_line_idx in selected[1]:
-                                    continue
-                                matching_points = sum(1 for p in line if p in selected_points_set)
-                                # if both are selected, select line
-                                if matching_points >= 2:
-                                    selected[1].append(possible_line_idx)
-                            for face_idx in selected[2]:
-                                for possible_line_idx, line in enumerate(lines):
-                                    if possible_line_idx in faces[face_idx] and possible_line_idx not in selected[1]:
-                                        selected[1].append(possible_line_idx)
+                            selected[1] += utils.point_idxs_to_line_idxs(selected[0], selected[1], lines)
+                            selected[1] += utils.point_idxs_to_line_idxs(utils.face_idxs_to_point_idxs(selected[2], faces), selected[1], lines)
                             selected[0] = []
                             selected[2] = []
                         case pygame.K_3:
@@ -168,22 +155,8 @@ def main():
                                 for point_index in selected[0]:
                                     points[point_index] = initial_poses[selected[0].index(point_index)]
                             selection = 2
-                            selected_points_set = set(selected[0])
-                                
-                            for possible_face_idx, face in enumerate(faces):
-                                # skip if selected
-                                if possible_face_idx in selected[2]:
-                                    continue
-
-                                matching_points = sum(1 for p in face if p in selected_points_set)
-                                
-                                # if both are selected, select line
-                                if matching_points >= 3:
-                                    selected[2].append(possible_face_idx)
-                            for face_idx in selected[2]:
-                                for possible_line_idx, line in enumerate(lines):
-                                    if possible_line_idx in faces[face_idx] and possible_line_idx not in selected[1]:
-                                        selected[1].append(possible_line_idx)
+                            selected[2] += utils.point_idxs_to_face_idxs(selected[0], selected[2], faces)
+                            selected[2] += utils.point_idxs_to_face_idxs(utils.line_idxs_to_points(selected[1], lines), selected[2], faces)
                             selected[0] = []
                             selected[1] = []
                         case pygame.K_4:
@@ -705,7 +678,7 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
             pygame.draw.circle(SCREEN, (200, 200, 200), screen_points[data], 3)
 
         elif item_type == 'line' and wireframe:
-            pygame.draw.line(SCREEN, (255, 255, 255), screen_points[data[0]], screen_points[data[1]], 1)
+            pygame.draw.line(SCREEN, (255, 255, 255), screen_points[data[0]], screen_points[data[1]], 2)
             
         elif item_type == 'face':
             p0 = screen_points[data[0]]
@@ -724,7 +697,7 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
             # color = (50, 120, 255) # Blue = Front
 
             pygame.draw.polygon(SCREEN, color, (p0, p1, p2))
-            pygame.draw.polygon(SCREEN, (100, 100, 100), (p0, p1, p2), 1)
+            pygame.draw.polygon(SCREEN, constants.DARK_GREY, (p0, p1, p2), 2)
 
     # guidelines
     d = utils.length(offset) / 2 
@@ -768,13 +741,13 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
     for line_index in selected[1]:
         if line_index < len(lines):
             line_pts = lines[line_index]
-            pygame.draw.line(SCREEN, (255, 255, 0), screen_points[line_pts[0]], screen_points[line_pts[1]], 3)
+            pygame.draw.line(SCREEN, (255, 255, 0), screen_points[line_pts[0]], screen_points[line_pts[1]], 4)
             
     for face_index in selected[2]:
         if face_index < len(faces):
             face_pts = faces[face_index]
             p0, p1, p2 = screen_points[face_pts[0]], screen_points[face_pts[1]], screen_points[face_pts[2]]
-            pygame.draw.polygon(SCREEN, (255, 255, 0), (p0, p1, p2), 3)
+            pygame.draw.polygon(SCREEN, (255, 255, 0), (p0, p1, p2))
 
     ### HUD ###
     inc_size = 20

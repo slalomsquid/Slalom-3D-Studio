@@ -226,3 +226,51 @@ def get_lock_lines(points, selected, locks, d, thickness=2):
         if locks[2]:
             lines.append(((pt[0], pt[1], pt[2]-d), (pt[0], pt[1], pt[2]+d), constants.BLUE, thickness))
     return lines
+
+def line_idxs_to_points(line_idxs, lines):
+    point_idxs = []
+    # loop trough each point and extract the index
+    for line_idx in line_idxs:
+        for point in lines[line_idx]:
+            point_idxs.append(point)
+    return point_idxs
+
+def face_idxs_to_point_idxs(face_idxs, faces):
+    point_idxs = []
+    # loop trough each point and extract the index
+    for face_idx in face_idxs:
+        for point in faces[face_idx]:
+            point_idxs.append(point)
+    return point_idxs
+
+def point_idxs_to_line_idxs(point_idxs, line_idxs, lines):
+    # makes copy
+    selected_points_set = set(point_idxs)
+    new_line_idxs = list(line_idxs)
+    
+    for possible_line_idx, line in enumerate(lines):
+        # skip if selected
+        if possible_line_idx in new_line_idxs:
+            continue
+        matching_points = sum(1 for p in line if p in selected_points_set)
+        # if both are selected, select line
+        if matching_points >= 2:
+            new_line_idxs.append(possible_line_idx)
+            
+    return new_line_idxs
+
+def point_idxs_to_face_idxs(point_idxs, face_idxs, faces):
+    # makes copy
+    selected_points_set = set(point_idxs)
+    new_face_idxs = list(face_idxs)
+    
+    for possible_face_idx, line in enumerate(faces):
+        # skip if selected
+        if possible_face_idx in new_face_idxs:
+            continue
+        matching_points = sum(1 for p in line if p in selected_points_set)
+        # if both are selected, select line
+        if matching_points >= 3:
+            new_face_idxs.append(possible_face_idx)
+            
+    return new_face_idxs
