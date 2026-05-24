@@ -720,7 +720,7 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, x_lock=
     guide_lines = []
     
     guide_lines.extend(utils.get_axis_lines(d, thickness=4))
-    guide_lines.extend(utils.get_grid_lines(d, dmod=2, color=constants.LIGHT_GREY, thickness=1))
+    guide_lines.extend(utils.get_grid_lines(d, dmod=2, color=constants.DARK_GREY, thickness=1))
     
     if moving:
         guide_lines.extend(utils.get_lock_lines(points, selected, x_lock, y_lock, z_lock, d, thickness=4))
