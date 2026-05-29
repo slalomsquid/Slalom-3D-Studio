@@ -37,13 +37,40 @@ def main():
         [1,5],
         [2,6],
         [3,7],
+
+        [0,5],
+        [1,6],
+        [2,7],
+        [3,4],
+
+        [0,2],
+        [4,6]
     ]
     faces = [
-        [1,0,2],
-        [1,5,0],
-        [1,2,5],
-        [2,0,5]
+        # [1,0,2],
+        # [1,5,0],
+        # [1,2,5],
+        # [2,0,5],
+        [5, 6, 4], 
+        [6, 7, 4], 
+        [4, 7, 3], 
+        [2, 3, 7], 
+        [6, 2, 7], 
+        [6, 5, 1], 
+        [1, 2, 6], 
+        [5, 4, 0], 
+        [0, 1, 5], 
+        [4, 3, 0], 
+        [2, 0, 3], 
+        [0, 2, 1]
     ]
+    colors = [
+        [0,0,0],
+        [255,0,0],
+        [0,255,0],
+        [0,0,255]
+    ]
+
     offset : list[float] = [0.0,0.0,5.0] # Moves the object 5 away from the camera
     rotation : list[float]= [math.pi/8,0.0,0.0]
 
@@ -75,7 +102,6 @@ def main():
         delta_time = clock.tick(constants.FPS) / 1000.0
 
         timer += delta_time
-
         if timer >= 2:
             timer = 0.0
             print(clock.get_fps())
@@ -202,6 +228,20 @@ def main():
                                 new_face = [selected[0][0], selected[0][1], selected[0][2]]
                                 if new_face not in faces:
                                     faces.append(new_face)
+
+                                    transformed_points = utils.transform_points(points, rotation, offset)
+                                    screen_points = utils.get_screen_points(transformed_points)
+
+                                    p0 = screen_points[new_face[0]]
+                                    p1 = screen_points[new_face[1]]
+                                    p2 = screen_points[new_face[2]]
+
+                                    # check winding
+                                    winding = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0])
+
+                                    if winding < 0:
+                                        faces[-1] = utils.flip_face(new_face)
+
                         case pygame.K_x:
                             if moving:
                                 axis_lock[0] = not axis_lock[0]
@@ -346,6 +386,13 @@ def main():
                                 for point_idx in selected[0]:
                                     initial_poses.append(points[point_idx][:]) # Store initial pos
                                 scale_centre = utils.get_centre(initial_poses)
+                        case pygame.K_p:
+                            print(faces)
+                        case pygame.K_n:
+                            if selection == 2:
+                                for face in selected[2]:
+                                    # faces[face] = [faces[face][1], faces[face][0], faces[face][2]]
+                                    faces[face] = utils.flip_face(faces[face])
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         if moving or scaling:
@@ -396,7 +443,18 @@ def main():
                                                     axis_lock[2] = False
                                                 break
                                 case 2:
+
+                                    transformed_points = utils.transform_points(points, rotation, offset)
+
+                                    face_list = []
+
                                     for face in faces:
+                                        avg_z = utils.get_avg_z_of_points((transformed_points[point] for point in face))
+                                        face_list.append((avg_z, face))
+
+                                    face_list.sort(key=lambda item: item[0])
+
+                                    for avg_z, face in face_list:
                                         if utils.is_in_triangle((screen_points[face[0]], screen_points[face[1]], screen_points[face[2]]), event.pos):
                                             if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
                                                 if faces.index(face) in selected[2]:
@@ -660,13 +718,16 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
 
     # Calculate face z height
     for face in faces:
-        p0 = transformed_points[face[0]]
-        p1 = transformed_points[face[1]]
-        p2 = transformed_points[face[2]]
+        # p0 = transformed_points[face[0]]
+        # p1 = transformed_points[face[1]]
+        # p2 = transformed_points[face[2]]
         
-        if p0[2] <= 0 or p1[2] <= 0 or p2[2] <= 0: continue
+        # if p0[2] <= 0 or p1[2] <= 0 or p2[2] <= 0: continue
         
-        avg_z = (p0[2] + p1[2] + p2[2]) / 3.0
+        # avg_z = (p0[2] + p1[2] + p2[2]) / 3.0
+        # render_queue.append((avg_z, 'face', face))
+
+        avg_z = utils.get_avg_z_of_points((transformed_points[point] for point in face))
         render_queue.append((avg_z, 'face', face))
 
     # sort z height
@@ -733,7 +794,7 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
             p1_screen = utils.plane_to_screen(utils.point_to_plane(rotated_line[1], offset))
             pygame.draw.line(SCREEN, color, p0_screen, p1_screen, thickness)
 
-    # hilight actives
+    ### hilight selections ###
     for point_index in selected[0]:
         if point_index < len(screen_points):
             pygame.draw.circle(SCREEN, (255, 255, 0), screen_points[point_index], 6, 2)
@@ -747,7 +808,9 @@ def draw(points, lines, faces, offset, rotation, selected, moving=False, axis_lo
         if face_index < len(faces):
             face_pts = faces[face_index]
             p0, p1, p2 = screen_points[face_pts[0]], screen_points[face_pts[1]], screen_points[face_pts[2]]
-            pygame.draw.polygon(SCREEN, (255, 255, 0), (p0, p1, p2))
+            tmp_surf = pygame.Surface((constants.WIDTH, constants.HEIGHT), pygame.SRCALPHA)
+            pygame.draw.polygon(tmp_surf, (255, 255, 0, 100), (p0, p1, p2))
+            SCREEN.blit(tmp_surf, (0,0))
 
     ### HUD ###
     inc_size = 20

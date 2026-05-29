@@ -274,3 +274,36 @@ def point_idxs_to_face_idxs(point_idxs, face_idxs, faces):
             new_face_idxs.append(possible_face_idx)
             
     return new_face_idxs
+
+def get_join(line_idx_1, line_idx_2, lines):
+    """Checks if 2 lines are joined by a common point"""
+    for point in lines[line_idx_1]:
+        if point in lines[line_idx_2]:
+            return point
+    return None
+
+def get_avg_z_of_points(points):
+    """Returns avg z value of face"""
+
+    # p0 = transformed_points[face[0]]
+    # p1 = transformed_points[face[1]]
+    # p2 = transformed_points[face[2]]
+    
+    # if p0[2] <= 0 or p1[2] <= 0 or p2[2] <= 0: continue
+    
+    # avg_z = (p0[2] + p1[2] + p2[2]) / 3.0
+    # render_queue.append((avg_z, 'face', face))
+
+    points_list = list(points)
+    
+    if not points_list:
+        return 0.0
+
+    z_sum = sum(point[2] for point in points_list)
+    return z_sum / len(points_list)
+
+    # z_sum = sum(points[point][2] for point in points)
+    # return z_sum / len(points)
+
+def flip_face(face):
+    return [face[1], face[0], face[2]]
